@@ -1,6 +1,5 @@
 name: 'Terraform Apply'
 
-
 on:
   workflow_dispatch:
     inputs:
@@ -35,13 +34,13 @@ jobs:
     - name: Set Account ID
       id: account
       run: |
-        echo "::set-output name=ACCOUNT_ID::$(aws sts get-caller-identity --query Account --output text)"
+        echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
 
     - name: Check previous AWSGoat Deployment
       id: check 
       run: |
         echo $ACCOUNT_ID
-        aws s3api head-object --bucket do-not-delete-awsgoat-state-files-${{ steps.account.outputs.ACCOUNT_ID }} --key terraform.tfstate
+        aws s3api head-object --bucket do-not-delete-awsgoat-state-files-${{ env.ACCOUNT_ID }} --key terraform.tfstate
       continue-on-error: true
 
     - name: Exit if previous deployment exists
@@ -57,10 +56,10 @@ jobs:
         terraform init 
         
     # Installs boto3
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@v4
       with:
         python-version: 3
-    - name: install
+    - name: Install boto3
       run: |
         pip install boto3
     
@@ -82,13 +81,13 @@ jobs:
       continue-on-error: false
 
     # Copy tfstate file to s3 bucket
-    - name: Copy terraform.tfstate file to s3bucket
+    - name: Copy terraform.tfstate file to s3 bucket
       if: always()
       run: |
         cd modules/${{ github.event.inputs.module }}
-        aws s3 cp ./terraform.tfstate s3://do-not-delete-awsgoat-state-files-${{ steps.account.outputs.ACCOUNT_ID }}/terraform.tfstate 
+        aws s3 cp ./terraform.tfstate s3://do-not-delete-awsgoat-state-files-${{ env.ACCOUNT_ID }}/terraform.tfstate 
 
-    # Terraform Output the API Gateway url
+    # Terraform Output the API Gateway URL
     - name: Application URL
       run: |
         cd modules/${{ github.event.inputs.module }}
